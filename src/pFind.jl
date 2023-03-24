@@ -88,7 +88,7 @@ end
 
 parse_mod(pep, mod) = begin
     mods = map(m -> match(r"^(\d+),(.+)$", String(m)).captures, split(mod === missing ? "" : mod, ';'; keepempty=false))
-    return sort!(map(m -> (m[2], max(min(length(pep), parse(Int, m[1])), 1)), mods))
+    return sort!(map(m -> (Symbol(m[2]), max(min(length(pep), parse(Int, m[1])), 1)), mods))
 end
 
 read_psm(path) = begin
@@ -112,6 +112,7 @@ read_psm(path) = begin
     DataFrames.transform!(df, [:mh_calc, :mh] => DataFrames.ByRow(MesMS.error_ppm) => :error)
     DataFrames.transform!(df, [:mh, :z] => DataFrames.ByRow(MesMS.mh_to_mz) => :mz)
     DataFrames.transform!(df, [:mh_calc, :z] => DataFrames.ByRow(MesMS.mh_to_mz) => :mz_calc)
+    df.td = Symbol.(df.td)
     return df
 end
 

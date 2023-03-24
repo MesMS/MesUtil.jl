@@ -41,6 +41,7 @@ parse_pair(pep, mods, prots, match_a, match_b) = begin
     if mods != "null"
         for mod in split(mods, ';'; keepempty=false)
             mod_type, mod_site = match(r"^(.+)\((\d+)\)$", String(mod)).captures
+            mod_type = Symbol(mod_type)
             mod_site = parse(Int, mod_site)
             if mod_site <= length(pep_a) + 1
                 push!(mod_a, (mod_type, mod_site))
