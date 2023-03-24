@@ -91,9 +91,9 @@ parse_mod(pep, mod) = begin
     return sort!(map(m -> (Symbol(m[2]), max(min(length(pep), parse(Int, m[1])), 1)), mods))
 end
 
-read_psm(path) = begin
+read_psm(path; silencewarnings=false) = begin
     @info "PSM loading from " * path
-    df = DataFrames.DataFrame(CSV.File(path; delim='\t'))
+    df = DataFrames.DataFrame(CSV.File(path; delim='\t', silencewarnings))
     DataFrames.rename!(df, Dict(
         :File_Name => :title,
         :Charge => :z,
