@@ -102,7 +102,7 @@ read_psm(path; silencewarnings=false) = begin
         Symbol("Q-value") => :q_value,
         :Raw_Score => :score_raw,
         :Final_Score => :score,
-        :Proteins => :proteins,
+        :Proteins => :prot,
         Symbol("Target/Decoy") => :td,
     ))
     df.id = Vector{Int}(1:DataFrames.nrow(df))
