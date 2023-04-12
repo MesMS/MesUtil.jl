@@ -62,7 +62,7 @@ end
 
 read_psm(path) = begin
     @info "PSM loading from " * path
-    df = DataFrames.DataFrame(CSV.File(path; delim=','))
+    df = DataFrames.DataFrame(CSV.File(path; delim=',', missingstring=nothing))
     if "Protein_Type" in names(df)
         DataFrames.rename!(df, :Protein_Type => :prot_type)
         if eltype(df.prot_type) <: Number
