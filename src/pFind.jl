@@ -126,4 +126,60 @@ pepstr(seq, mods; delim="") = begin
     end
 end
 
+find_prot(seq, fasta) = begin
+    prot = [k for (k, v) in fasta if occursin(seq, v)]
+    return (; prot=join(prot, '/'), td=!any(p -> startswith(p, "REV_"), prot))
+end
+
+find_prot!(seq, fasta, mem) = begin
+    if !haskey(mem, seq)
+        mem[seq] = find_prot(seq, fasta)
+    end
+    return mem[seq]
+end
+
+parse_top_n_row(line; itol=true) = begin
+    items = split(line, '\t')
+    pep = items[2]
+    n_mod = parse(Int, items[7])
+    mods = map(1:n_mod) do i
+        mod = Symbol(rsplit(items[7 + 2 * i], '#'; limit=2)[1])
+        site = min(length(pep), max(1, parse(Int, items[7 + 2 * i - 1])))
+        return (mod, site)
+    end
+    return (; pep=MesMS.unify_aa_seq(pep; itol), mod=mods)
+end
+
+read_top_n(path, fasta=nothing; itol=true) = begin
+    lines = open(path) do io
+        return collect(eachline(io))
+    end
+    D = typeof((; raw="", scan=0, idx_pre=0, mz=0.0, z=0, iden=[]))[]
+    i = 1
+    mem = Dict()
+    while i ≤ length(lines)
+        if !startswith(lines[i], "S\t")
+            throw("unexcepted line: $(lines[i])")
+        end
+        items = split(lines[i], '\t')
+        mz = parse(Float64, items[2])
+        z = parse(Int, items[3])
+        i += 1
+        title = strip(lines[i])
+        raw, scan, idx_pre = pFind.parse_title(title)
+        i += 1
+        iden = []
+        while i ≤ length(lines) && !startswith(lines[i], "S\t")
+            push!(iden, lines[i])
+            i += 1
+        end
+        iden = parse_top_n_row.(iden; itol)
+        if !isnothing(fasta)
+            iden = [(; i..., find_prot!(i.pep, fasta, mem)...) for i in iden]
+        end
+        push!(D, (; raw, scan, idx_pre, mz, z, iden))
+    end
+    return D
+end
+
 end
