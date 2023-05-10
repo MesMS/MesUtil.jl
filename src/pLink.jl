@@ -117,26 +117,32 @@ read_psm_full(path) = begin
         :Target_Decoy => :td, Symbol("Q-value") => :fdr, Symbol("E-value") => :evalue,
         :Proteins => :prot, :Protein_Type => :prot_type,
     )
-    
+
     t = df.Peptide_Type
     DataFrames.select!(df, DataFrames.Not(:Peptide_Type))
     df_linear = df[t .== 0, :]
     df_mono = df[t .== 1, :]
     df_loop = df[t .== 2, :]
     df_xl = df[t .== 3, :]
-    
+
     for d in [df_linear, df_mono, df_loop]
         td = fill(:Unknown, size(d, 1))
         td[d.td .== 0] .= :D
         td[d.td .== 2] .= :T
         d.td = td
     end
-    
+
     td = fill(:Unknown, size(df_xl, 1))
     td[df_xl.td .== 0] .= :DD
     td[df_xl.td .== 1] .= :TD
     td[df_xl.td .== 2] .= :TT
     df_xl.td = td
+
+    t = fill(:Unknown, size(df_xl, 1))
+    t[df_xl.prot_type .== 1] .= :Intra
+    t[df_xl.prot_type .== 2] .= :Inter
+    df_xl.td = prot_type
+
     src = [:pep, :mod, :prot]
     dst = [:pep_a, :mod_a, :site_a, :prot_a, :pep_b, :mod_b, :site_b, :prot_b]
     DataFrames.transform!(df_xl, src => DataFrames.ByRow(parse_pair) => dst)
