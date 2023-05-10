@@ -117,6 +117,9 @@ read_psm_full(path) = begin
         :Target_Decoy => :td, Symbol("Q-value") => :fdr, Symbol("E-value") => :evalue,
         :Proteins => :prot, :Protein_Type => :prot_type,
     )
+    DataFrames.transform!(df, [:mh, :z] => DataFrames.ByRow(MesMS.mh_to_mz) => :mz)
+    DataFrames.transform!(df, [:mh_calc, :z] => DataFrames.ByRow(MesMS.mh_to_mz) => :mz_calc)
+    DataFrames.transform!(df, :title => DataFrames.ByRow(pFind.parse_title) => [:raw, :scan, :idx_pre])
 
     t = df.Peptide_Type
     DataFrames.select!(df, DataFrames.Not(:Peptide_Type))
@@ -147,8 +150,8 @@ read_psm_full(path) = begin
     dst = [:pep_a, :mod_a, :site_a, :prot_a, :pep_b, :mod_b, :site_b, :prot_b]
     DataFrames.transform!(df_xl, src => DataFrames.ByRow(parse_pair) => dst)
     DataFrames.select!(df_xl,
-        :title, :mh, :z, :pep_a, :pep_b, :site_a, :site_b, :mod_a, :mod_b,
-        :td, :fdr, :prot_a, :prot_b, DataFrames.Not(src),
+        :raw, :scan, :idx_pre, :mh, :mz, :z, :pep_a, :pep_b, :site_a, :site_b, :mod_a, :mod_b,
+        :td, :fdr, :prot_a, :prot_b, :title, DataFrames.Not(src),
     )
     return (; xl=df_xl, loop=df_loop, mono=df_mono, linear=df_linear)
 end
