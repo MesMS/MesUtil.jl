@@ -141,7 +141,7 @@ read_psm_full(path) = begin
     t = fill(:Unknown, size(df_xl, 1))
     t[df_xl.prot_type .== 1] .= :Intra
     t[df_xl.prot_type .== 2] .= :Inter
-    df_xl.td = prot_type
+    df_xl.prot_type = t
 
     src = [:pep, :mod, :prot]
     dst = [:pep_a, :mod_a, :site_a, :prot_a, :pep_b, :mod_b, :site_b, :prot_b]
