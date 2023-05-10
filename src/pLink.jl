@@ -33,7 +33,7 @@ read_linker(path=joinpath(DIR_DATA, "xlink.ini")) = begin
     return Dict(d)
 end
 
-parse_pair(pep, mods, prots, match_a, match_b) = begin
+_parse_pair(pep, mods, prots) = begin
     pep_a, site_a, pep_b, site_b = match(r"^(\w+)\((\d+)\)-(\w+)\((\d+)\)$", pep).captures
     pep_a, pep_b = MesMS.unify_aa_seq(pep_a), MesMS.unify_aa_seq(pep_b)
     site_a, site_b = parse(Int, site_a), parse(Int, site_b)
@@ -57,11 +57,21 @@ parse_pair(pep, mods, prots, match_a, match_b) = begin
         push!(prot_a, (strip(seq_a), parse(Int, site_seq_a)))
         push!(prot_b, (strip(seq_b), parse(Int, site_seq_b)))
     end
-    return vcat(sort([[pep_a, sort(mod_a), site_a, unique(prot_a), match_a], [pep_b, sort(mod_b), site_b, unique(prot_b), match_b]])...)
+    return pep_a, mod_a, site_a, prot_a, pep_b, mod_b, site_b, prot_b
+end
+
+parse_pair(pep, mods, prots) = begin
+    pep_a, mod_a, site_a, prot_a, pep_b, mod_b, site_b, prot_b = _parse_pair(pep, mods, prots)
+    return vcat(sort([[pep_a, sort(mod_a), site_a, unique(prot_a)], [pep_b, sort(mod_b), site_b, unique(prot_b)]])...)
+end
+
+parse_pair(pep, mods, prots, extra_a, extra_b) = begin
+    pep_a, mod_a, site_a, prot_a, pep_b, mod_b, site_b, prot_b = _parse_pair(pep, mods, prots)
+    return vcat(sort([[pep_a, sort(mod_a), site_a, unique(prot_a), extra_a], [pep_b, sort(mod_b), site_b, unique(prot_b), extra_b]])...)
 end
 
 read_psm(path) = begin
-    @info "PSM loading from " * path
+    @info "pLink PSM reading from " * path
     df = DataFrames.DataFrame(CSV.File(path; delim=',', missingstring=nothing))
     if "Protein_Type" in names(df)
         DataFrames.rename!(df, :Protein_Type => :prot_type)
@@ -90,6 +100,51 @@ read_psm(path) = begin
     ("fdr" in names(df)) && (df.fdr = df.fdr ./ 100)
     DataFrames.transform!(df, :title => DataFrames.ByRow(pFind.parse_title) => [:raw, :scan, :idx_pre])
     return df
+end
+
+read_psm_full(path) = begin
+    @info "pLink PSM (full list) reading from " * path
+    df = DataFrames.DataFrame(CSV.File(path))
+    DataFrames.select!(df, DataFrames.Not(
+        ["Order", "FileID", "isComplexSatisfied", "isFilterIn"]
+    ))
+    DataFrames.rename!(df,
+        :Title => :title, :Peptide => :pep, :Modifications => :mod,
+        :Charge => :z, :Precursor_MH => :mh, :Peptide_MH => :mh_calc,
+        Symbol("Precursor_Mass_Error(ppm)") => :error,
+        Symbol("Precursor_Mass_Error(Da)") => :error_da,
+        :Score => :score, :SVM_Score => :score_svm, :Refined_Score => :score_refined,
+        :Target_Decoy => :td, Symbol("Q-value") => :fdr, Symbol("E-value") => :evalue,
+        :Proteins => :prot, :Protein_Type => :prot_type,
+    )
+    
+    t = df.Peptide_Type
+    DataFrames.select!(df, DataFrames.Not(:Peptide_Type))
+    df_linear = df[t .== 0, :]
+    df_mono = df[t .== 1, :]
+    df_loop = df[t .== 2, :]
+    df_xl = df[t .== 3, :]
+    
+    for d in [df_linear, df_mono, df_loop]
+        td = fill(:Unknown, size(d, 1))
+        td[d.td .== 0] .= :D
+        td[d.td .== 2] .= :T
+        d.td = td
+    end
+    
+    td = fill(:Unknown, size(df_xl, 1))
+    td[df_xl.td .== 0] .= :DD
+    td[df_xl.td .== 1] .= :TD
+    td[df_xl.td .== 2] .= :TT
+    df_xl.td = td
+    src = [:pep, :mod, :prot]
+    dst = [:pep_a, :mod_a, :site_a, :prot_a, :pep_b, :mod_b, :site_b, :prot_b]
+    DataFrames.transform!(df_xl, src => DataFrames.ByRow(parse_pair) => dst)
+    DataFrames.select!(df_xl,
+        :title, :mh, :z, :pep_a, :pep_b, :site_a, :site_b, :mod_a, :mod_b,
+        :td, :fdr, :prot_a, :prot_b, DataFrames.Not(src),
+    )
+    return (; xl=df_xl, loop=df_loop, mono=df_mono, linear=df_linear)
 end
 
 parse_n_spec(path) = begin
