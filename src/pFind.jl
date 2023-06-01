@@ -82,8 +82,8 @@ read_mod(path=joinpath(DIR_DATA, "modification.ini")) = begin
 end
 
 parse_title(title) = begin
-    raw, scan, _, _, idx, _  = rsplit(strip(title), '.'; limit=6)
-    return raw, parse(Int, scan), parse(Int, idx)
+    file, scan, _, _, idx, _  = rsplit(strip(title), '.'; limit=6)
+    return file, parse(Int, scan), parse(Int, idx)
 end
 
 parse_mod(pep, mod) = begin
@@ -106,7 +106,7 @@ read_psm(path; silencewarnings=false) = begin
         Symbol("Target/Decoy") => :td,
     ))
     df.id = Vector{Int}(1:DataFrames.nrow(df))
-    DataFrames.transform!(df, :title => DataFrames.ByRow(parse_title) => [:raw, :scan, :idx_pre])
+    DataFrames.transform!(df, :title => DataFrames.ByRow(parse_title) => [:file, :scan, :idx_pre])
     DataFrames.transform!(df, :Sequence => DataFrames.ByRow(MesMS.unify_aa_seq) => :pep)
     DataFrames.transform!(df, [:pep, :Modification] => DataFrames.ByRow(parse_mod) => :mod)
     DataFrames.transform!(df, [:mh_calc, :mh] => DataFrames.ByRow(MesMS.error_ppm) => :error)
@@ -154,7 +154,7 @@ read_top_n(path, fasta=nothing; itol=true) = begin
     lines = open(path) do io
         return collect(eachline(io))
     end
-    D = typeof((; raw="", scan=0, idx_pre=0, mz=0.0, z=0, iden=[]))[]
+    D = typeof((; file="", scan=0, idx_pre=0, mz=0.0, z=0, iden=[]))[]
     i = 1
     mem = Dict()
     while i ≤ length(lines)
@@ -166,7 +166,7 @@ read_top_n(path, fasta=nothing; itol=true) = begin
         z = parse(Int, items[3])
         i += 1
         title = strip(lines[i])
-        raw, scan, idx_pre = pFind.parse_title(title)
+        file, scan, idx_pre = pFind.parse_title(title)
         i += 1
         iden = []
         while i ≤ length(lines) && !startswith(lines[i], "S\t")
@@ -177,7 +177,7 @@ read_top_n(path, fasta=nothing; itol=true) = begin
         if !isnothing(fasta)
             iden = [(; i..., find_prot!(i.pep, fasta, mem)...) for i in iden]
         end
-        push!(D, (; raw, scan, idx_pre, mz, z, iden))
+        push!(D, (; file, scan, idx_pre, mz, z, iden))
     end
     return D
 end

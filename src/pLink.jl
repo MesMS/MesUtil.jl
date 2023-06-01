@@ -98,7 +98,7 @@ read_psm(path) = begin
     DataFrames.transform!(df, [:mh, :z] => DataFrames.ByRow(MesMS.mh_to_mz) => :mz)
     ("linker" in names(df)) && DataFrames.transform!(df, :linker => DataFrames.ByRow(Symbol) => :linker)
     ("fdr" in names(df)) && (df.fdr = df.fdr ./ 100)
-    DataFrames.transform!(df, :title => DataFrames.ByRow(pFind.parse_title) => [:raw, :scan, :idx_pre])
+    DataFrames.transform!(df, :title => DataFrames.ByRow(pFind.parse_title) => [:file, :scan, :idx_pre])
     return df
 end
 
@@ -119,7 +119,7 @@ read_psm_full(path) = begin
     )
     DataFrames.transform!(df, [:mh, :z] => DataFrames.ByRow(MesMS.mh_to_mz) => :mz)
     DataFrames.transform!(df, [:mh_calc, :z] => DataFrames.ByRow(MesMS.mh_to_mz) => :mz_calc)
-    DataFrames.transform!(df, :title => DataFrames.ByRow(pFind.parse_title) => [:raw, :scan, :idx_pre])
+    DataFrames.transform!(df, :title => DataFrames.ByRow(pFind.parse_title) => [:file, :scan, :idx_pre])
 
     t = df.Peptide_Type
     DataFrames.select!(df, DataFrames.Not(:Peptide_Type))
@@ -150,7 +150,7 @@ read_psm_full(path) = begin
     dst = [:pep_a, :mod_a, :site_a, :prot_a, :pep_b, :mod_b, :site_b, :prot_b]
     DataFrames.transform!(df_xl, src => DataFrames.ByRow(parse_pair) => dst)
     DataFrames.select!(df_xl,
-        :raw, :scan, :idx_pre, :mh, :mz, :z, :pep_a, :pep_b, :site_a, :site_b, :mod_a, :mod_b,
+        :file, :scan, :idx_pre, :mh, :mz, :z, :pep_a, :pep_b, :site_a, :site_b, :mod_a, :mod_b,
         :td, :fdr, :prot_a, :prot_b, :title, DataFrames.Not(src),
     )
     return (; xl=df_xl, loop=df_loop, mono=df_mono, linear=df_linear)
