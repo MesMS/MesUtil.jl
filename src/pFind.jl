@@ -117,6 +117,7 @@ read_psm(path; silencewarnings=false) = begin
 end
 
 modstr(mods; null="") = isempty(mods) ? null : join(map(m -> "$(m[1])@$(m[2])", mods), ",")
+protstr(prots; null="") = isempty(prots) ? null : join(map(p -> "$(p[1])@$(p[2])", prots), ",")
 
 pepstr(seq, mods; delim="") = begin
     if isempty(mods)
